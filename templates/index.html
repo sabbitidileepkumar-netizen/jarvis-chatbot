@@ -7,63 +7,62 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family: Arial, Helvetica, sans-serif; }
 
-body {
-    background:#020508;
-    color:#d9f7ff;
-    height:100vh;
-    overflow:hidden;
-}
+body { background:#020508; color:#d9f7ff; height:100vh; overflow:hidden; }
 
-.hud {
-    position:relative;
-    width:100%;
-    height:100vh;
-    background: radial-gradient(circle at center, #062235 0%, #02070b 40%, #000 85%);
+.app { display:flex; height:100vh; }
+
+/* Sidebar */
+.sidebar {
+    width:170px; background:#03080f; border-right:1px solid rgba(0,191,255,.3);
+    display:flex; flex-direction:column; padding:20px 0;
 }
+.avatar-box { text-align:center; padding-bottom:20px; border-bottom:1px solid rgba(0,191,255,.2); margin-bottom:10px; }
+.avatar {
+    width:60px; height:60px; margin:0 auto 8px;
+    border-radius:50%; border:2px solid #00bfff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; color:#00eaff; box-shadow:0 0 15px rgba(0,191,255,.4);
+}
+.avatar-name { font-size:12px; font-weight:bold; letter-spacing:2px; }
+.avatar-status { font-size:9px; color:#00ff88; margin-top:2px; }
+
+.nav-btn {
+    display:flex; align-items:center; gap:10px;
+    padding:12px 20px; font-size:12px; letter-spacing:1px;
+    color:#7fb8d9; cursor:pointer; border-left:3px solid transparent;
+    background:none; border-top:none; border-right:none; border-bottom:none;
+    width:100%; text-align:left;
+}
+.nav-btn:hover { color:#00eaff; }
+.nav-btn.active { color:#00eaff; background:rgba(0,140,255,.15); border-left:3px solid #00bfff; }
+.nav-icon { font-size:15px; width:18px; text-align:center; }
+
+/* Main */
+.main { flex:1; display:flex; flex-direction:column; position:relative; }
 
 .header {
-    height:80px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:0 30px;
-    border-bottom:1px solid rgba(0,191,255,.3);
+    height:70px; display:flex; align-items:center; justify-content:space-between;
+    padding:0 30px; border-bottom:1px solid rgba(0,191,255,.3);
 }
-
-.logo { font-size:24px; font-weight:bold; letter-spacing:4px; color:#e8fbff; text-shadow:0 0 10px #00bfff; }
-.subtitle { font-size:10px; letter-spacing:3px; color:#009dff; margin-top:4px; }
-
+.logo { font-size:22px; font-weight:bold; letter-spacing:4px; color:#e8fbff; text-shadow:0 0 10px #00bfff; }
+.subtitle { font-size:10px; letter-spacing:3px; color:#009dff; margin-top:2px; }
 .status { display:flex; align-items:center; gap:8px; color:#00eaff; font-size:12px; }
 .status-dot { width:9px; height:9px; background:#00ff88; border-radius:50%; box-shadow:0 0 10px #00ff88; }
 
-.chat-area {
-    height:calc(100vh - 80px);
-    position:relative;
-    display:flex;
-    flex-direction:column;
-}
+.panel { flex:1; display:none; overflow-y:auto; position:relative; flex-direction:column; }
+.panel.active { display:flex; }
 
+/* Chat panel */
 .reactor {
-    position:absolute;
-    width:400px; height:400px;
-    left:50%; top:50%;
-    transform:translate(-50%,-50%);
-    border-radius:50%;
-    opacity:.2;
-    pointer-events:none;
+    position:absolute; width:380px; height:380px; left:50%; top:50%;
+    transform:translate(-50%,-50%); border-radius:50%; opacity:.15; pointer-events:none;
 }
-.reactor::before, .reactor::after {
-    content:""; position:absolute; border-radius:50%; inset:0;
-    border:2px solid #00bfff;
-    box-shadow:0 0 15px #00bfff, inset 0 0 20px #0077ff;
-}
+.reactor::before, .reactor::after { content:""; position:absolute; border-radius:50%; inset:0; border:2px solid #00bfff; box-shadow:0 0 15px #00bfff, inset 0 0 20px #0077ff; }
 .reactor::after { inset:45px; border:8px dotted #00c8ff; animation:rotate 12s linear infinite; }
 .reactor-core {
-    position:absolute; width:90px; height:90px; left:50%; top:50%;
-    transform:translate(-50%,-50%); border-radius:50%;
+    position:absolute; width:80px; height:80px; left:50%; top:50%; transform:translate(-50%,-50%); border-radius:50%;
     background:radial-gradient(circle, white 0%, #70eaff 20%, #00bfff 45%, #006eff 70%, transparent 72%);
-    box-shadow:0 0 30px #00d9ff, 0 0 70px #008cff;
-    animation:pulse 2s infinite alternate;
+    box-shadow:0 0 30px #00d9ff, 0 0 70px #008cff; animation:pulse 2s infinite alternate;
 }
 @keyframes rotate { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
 @keyframes pulse { from{transform:translate(-50%,-50%) scale(.9);} to{transform:translate(-50%,-50%) scale(1.08);} }
@@ -72,79 +71,108 @@ body {
 .messages::-webkit-scrollbar { width:5px; }
 .messages::-webkit-scrollbar-thumb { background:#008cff; }
 
-.message {
-    max-width:600px; margin-bottom:18px; padding:14px 18px;
-    border:1px solid rgba(0,190,255,.4);
-    background:rgba(2,16,27,.85);
-    line-height:1.5; font-size:14px;
-}
+.message { max-width:600px; margin-bottom:18px; padding:14px 18px; border:1px solid rgba(0,190,255,.4); background:rgba(2,16,27,.85); line-height:1.5; font-size:14px; }
 .message.ai { border-left:3px solid #00bfff; margin-right:auto; }
 .message.user { border-right:3px solid #0077ff; margin-left:auto; text-align:right; }
 .sender { font-size:10px; letter-spacing:2px; color:#00bfff; margin-bottom:6px; }
 
 .input-area { padding:15px 6% 20px; display:flex; gap:10px; z-index:4; position:relative; }
-.input-box {
-    flex:1; display:flex; align-items:center;
-    border:1px solid #008cff;
-    background:rgba(0,10,18,.9);
-    box-shadow:0 0 10px rgba(0,140,255,.2);
-}
-#messageInput {
-    flex:1; padding:14px; background:transparent; border:none; outline:none;
-    color:#fff; font-size:14px;
-}
+.input-box { flex:1; display:flex; align-items:center; border:1px solid #008cff; background:rgba(0,10,18,.9); box-shadow:0 0 10px rgba(0,140,255,.2); }
+#messageInput { flex:1; padding:14px; background:transparent; border:none; outline:none; color:#fff; font-size:14px; }
 #messageInput::placeholder { color:#527b8c; }
 button { border:none; cursor:pointer; }
-.send {
-    width:52px; background:#008cff; color:#fff; font-size:20px;
-    box-shadow:0 0 15px #0077ff;
-}
+.send { width:52px; background:#008cff; color:#fff; font-size:20px; box-shadow:0 0 15px #0077ff; }
 .send:hover { background:#00c8ff; }
 .send:disabled { opacity:.5; cursor:not-allowed; }
 
+/* Memory panel */
+.mem-content { padding:25px 6%; }
+.mem-content h3 { font-size:13px; letter-spacing:2px; color:#00bfff; margin-bottom:16px; }
+.mem-item { font-size:13px; padding:10px; border-bottom:1px solid rgba(0,191,255,.2); }
+.mem-item b { color:#00eaff; }
+.mem-add { display:flex; gap:8px; margin-top:16px; max-width:500px; }
+.mem-add input { flex:1; padding:10px; background:rgba(0,20,35,.9); border:1px solid #008cff; color:#fff; font-size:13px; outline:none; }
+.mem-add button { background:#008cff; color:#fff; padding:0 16px; font-size:13px; }
+
 @media(max-width:700px) {
-    .reactor { width:280px; height:280px; }
-    .messages { padding:20px 12px; }
+    .sidebar { width:60px; }
+    .nav-btn span.label { display:none; }
+    .avatar-name, .avatar-status { display:none; }
+    .reactor { width:260px; height:260px; }
 }
 </style>
 </head>
 <body>
 
-<div class="hud">
+<div class="app">
 
-    <header class="header">
-        <div>
-            <div class="logo">J.A.R.V.I.S</div>
-            <div class="subtitle">AI ASSISTANT SYSTEM</div>
+    <div class="sidebar">
+        <div class="avatar-box">
+            <div class="avatar">◉</div>
+            <div class="avatar-name">J.A.R.V.I.S</div>
+            <div class="avatar-status">● ONLINE</div>
         </div>
-        <div class="status">
-            <span class="status-dot"></span> ONLINE
-        </div>
-    </header>
+        <button class="nav-btn active" data-tab="chat"><span class="nav-icon">💬</span><span class="label">CHAT</span></button>
+        <button class="nav-btn" data-tab="memory"><span class="nav-icon">🧠</span><span class="label">MEMORY</span></button>
+    </div>
 
-    <section class="chat-area">
-        <div class="reactor"><div class="reactor-core"></div></div>
+    <div class="main">
+        <header class="header">
+            <div>
+                <div class="logo">J.A.R.V.I.S</div>
+                <div class="subtitle">AI ASSISTANT SYSTEM</div>
+            </div>
+            <div class="status"><span class="status-dot"></span> ONLINE</div>
+        </header>
 
-        <div class="messages" id="messages">
-            <div class="message ai">
-                <div class="sender">JARVIS</div>
-                Hello. System initialized successfully. How may I assist you?
+        <div class="panel active" id="chatPanel">
+            <div class="reactor"><div class="reactor-core"></div></div>
+            <div class="messages" id="messages">
+                <div class="message ai">
+                    <div class="sender">JARVIS</div>
+                    Hello. System initialized successfully. How may I assist you?
+                </div>
+            </div>
+            <div class="input-area">
+                <div class="input-box">
+                    <input id="messageInput" type="text" placeholder="Type your message..." autocomplete="off">
+                </div>
+                <button class="send" id="sendBtn" onclick="sendMessage()">➤</button>
             </div>
         </div>
 
-        <div class="input-area">
-            <div class="input-box">
-                <input id="messageInput" type="text" placeholder="Type your message..." autocomplete="off">
+        <div class="panel" id="memoryPanel">
+            <div class="mem-content">
+                <h3>SAVED MEMORY</h3>
+                <div id="memList">Loading...</div>
+                <div class="mem-add">
+                    <input id="memKey" placeholder="Key (e.g. name)">
+                    <input id="memValue" placeholder="Value">
+                    <button onclick="addMemory()">+</button>
+                </div>
             </div>
-            <button class="send" id="sendBtn" onclick="sendMessage()">➤</button>
         </div>
-    </section>
+    </div>
+
 </div>
 
 <script>
 const input = document.getElementById("messageInput");
 const messages = document.getElementById("messages");
 const sendBtn = document.getElementById("sendBtn");
+const navBtns = document.querySelectorAll(".nav-btn");
+const panels = document.querySelectorAll(".panel");
+const memList = document.getElementById("memList");
+
+navBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+        navBtns.forEach(b => b.classList.remove("active"));
+        panels.forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab + "Panel").classList.add("active");
+        if (btn.dataset.tab === "memory") loadMemory();
+    });
+});
 
 input.addEventListener("keydown", function(e) {
     if (e.key === "Enter" && !sendBtn.disabled) sendMessage();
@@ -171,6 +199,7 @@ async function sendMessage() {
         const response = await fetch("/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
             body: JSON.stringify({ message: text })
         });
 
@@ -192,6 +221,41 @@ function escapeHTML(text) {
     const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
+}
+
+async function loadMemory() {
+    memList.innerHTML = "Loading...";
+    try {
+        const res = await fetch("/memory", { credentials: "same-origin" });
+        const data = await res.json();
+        const keys = Object.keys(data);
+        if (keys.length === 0) {
+            memList.innerHTML = "<div class='mem-item'>No memory saved yet.</div>";
+            return;
+        }
+        memList.innerHTML = keys.map(k =>
+            `<div class="mem-item"><b>${escapeHTML(k)}</b>: ${escapeHTML(data[k])}</div>`
+        ).join("");
+    } catch (e) {
+        memList.innerHTML = "<div class='mem-item'>Failed to load memory.</div>";
+    }
+}
+
+async function addMemory() {
+    const key = document.getElementById("memKey").value.trim();
+    const value = document.getElementById("memValue").value.trim();
+    if (!key || !value) return;
+
+    await fetch("/memory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ key, value })
+    });
+
+    document.getElementById("memKey").value = "";
+    document.getElementById("memValue").value = "";
+    loadMemory();
 }
 </script>
 
