@@ -11,6 +11,64 @@ body { background:#020508; color:#d9f7ff; height:100vh; overflow:hidden; }
 
 .app { display:flex; height:100vh; }
 
+/* Splash screen */
+#splash {
+    position:fixed; inset:0; background:#020508; z-index:9999;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
+#splash.hidden { display:none; }
+
+.wrap {
+    position:relative;
+    width:260px; height:260px;
+    margin-bottom:28px;
+    display:flex; align-items:center; justify-content:center;
+}
+.outer-glow {
+    position:absolute; inset:0; border-radius:50%;
+    box-shadow:0 0 50px rgba(0,191,255,.25);
+}
+.ring { position:absolute; border-radius:50%; }
+.ring1 { inset:0; border:1.5px solid rgba(0,191,255,.5); animation:spin 9s linear infinite; }
+.ring2 { inset:18px; border:1.5px dashed rgba(0,191,255,.55); animation:spin-rev 7s linear infinite; }
+.ring3 { inset:36px; border:1.5px dotted rgba(0,217,255,.7); animation:spin 5s linear infinite; }
+.hex-ring {
+    position:absolute; inset:54px; border-radius:50%;
+    background:repeating-conic-gradient(from 0deg, rgba(0,191,255,.08) 0deg 2deg, transparent 2deg 6deg);
+    animation:spin-slow 25s linear infinite;
+}
+.crosshair { position:absolute; background:rgba(0,191,255,.25); }
+.ch-h { top:50%; left:40px; right:40px; height:1px; }
+.ch-v { left:50%; top:40px; bottom:40px; width:1px; }
+.scan {
+    position:absolute; inset:54px; border-radius:50%;
+    background:conic-gradient(from 0deg, rgba(0,217,255,.5) 0deg, transparent 55deg, transparent 360deg);
+    animation:sweep 3s linear infinite;
+    mix-blend-mode:screen;
+}
+.blip { position:absolute; width:4px; height:4px; border-radius:50%; background:#00eaff; box-shadow:0 0 8px #00eaff; animation:blink 2.4s infinite; }
+.blip1 { top:40px; left:80px; animation-delay:.3s; }
+.blip2 { top:170px; left:210px; animation-delay:1s; }
+.blip3 { top:210px; left:70px; animation-delay:1.7s; }
+.core {
+    width:55px; height:55px; border-radius:50%;
+    background:radial-gradient(circle, white 0%, #70eaff 20%, #00bfff 45%, #006eff 70%, transparent 75%);
+    box-shadow:0 0 30px #00d9ff, 0 0 70px #008cff;
+    animation:pulse 1.6s infinite alternate;
+    z-index:5;
+}
+@keyframes spin { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+@keyframes spin-rev { from{transform:rotate(360deg);} to{transform:rotate(0deg);} }
+@keyframes spin-slow { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+@keyframes sweep { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+@keyframes pulse { from{transform:scale(.9);} to{transform:scale(1.1);} }
+@keyframes blink { 0%,100%{opacity:0;} 50%{opacity:1;} }
+
+.splash-title { font-size:22px; letter-spacing:6px; color:#e8fbff; text-shadow:0 0 12px #00bfff; margin-bottom:8px; }
+.splash-sub { font-size:9px; letter-spacing:3px; color:#009dff; margin-bottom:16px; }
+.splash-status { font-size:12px; letter-spacing:2px; color:#00bfff; min-height:18px; }
+.online-dot { display:inline-block; width:7px; height:7px; background:#00ff88; border-radius:50%; box-shadow:0 0 8px #00ff88; margin-right:6px; }
+
 /* Sidebar */
 .sidebar {
     width:170px; background:#03080f; border-right:1px solid rgba(0,191,255,.3);
@@ -62,10 +120,10 @@ body { background:#020508; color:#d9f7ff; height:100vh; overflow:hidden; }
 .reactor-core {
     position:absolute; width:80px; height:80px; left:50%; top:50%; transform:translate(-50%,-50%); border-radius:50%;
     background:radial-gradient(circle, white 0%, #70eaff 20%, #00bfff 45%, #006eff 70%, transparent 72%);
-    box-shadow:0 0 30px #00d9ff, 0 0 70px #008cff; animation:pulse 2s infinite alternate;
+    box-shadow:0 0 30px #00d9ff, 0 0 70px #008cff;
+    animation:pulse 2s infinite alternate;
 }
 @keyframes rotate { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
-@keyframes pulse { from{transform:translate(-50%,-50%) scale(.9);} to{transform:translate(-50%,-50%) scale(1.08);} }
 
 .messages { flex:1; overflow-y:auto; padding:25px 6%; position:relative; z-index:2; }
 .messages::-webkit-scrollbar { width:5px; }
@@ -99,10 +157,31 @@ button { border:none; cursor:pointer; }
     .nav-btn span.label { display:none; }
     .avatar-name, .avatar-status { display:none; }
     .reactor { width:260px; height:260px; }
+    .wrap { width:200px; height:200px; }
 }
 </style>
 </head>
 <body>
+
+<div id="splash">
+    <div class="wrap">
+        <div class="outer-glow"></div>
+        <div class="ring ring1"></div>
+        <div class="ring ring2"></div>
+        <div class="ring ring3"></div>
+        <div class="hex-ring"></div>
+        <div class="crosshair ch-h"></div>
+        <div class="crosshair ch-v"></div>
+        <div class="scan"></div>
+        <div class="blip blip1"></div>
+        <div class="blip blip2"></div>
+        <div class="blip blip3"></div>
+        <div class="core"></div>
+    </div>
+    <div class="splash-title">J.A.R.V.I.S</div>
+    <div class="splash-sub">AI ASSISTANT SYSTEM</div>
+    <div class="splash-status" id="splashStatus"><span class="online-dot"></span>Booting neural core...</div>
+</div>
 
 <div class="app">
 
@@ -157,6 +236,36 @@ button { border:none; cursor:pointer; }
 </div>
 
 <script>
+const splash = document.getElementById("splash");
+const splashStatus = document.getElementById("splashStatus");
+
+const bootMessages = [
+    "Booting neural core...",
+    "Calibrating arc reactor...",
+    "Loading modules...",
+    "Establishing secure link...",
+    "Synchronizing memory banks...",
+    "Almost there..."
+];
+let bootIndex = 0;
+const bootInterval = setInterval(() => {
+    bootIndex = (bootIndex + 1) % bootMessages.length;
+    splashStatus.innerHTML = '<span class="online-dot"></span>' + bootMessages[bootIndex];
+}, 1800);
+
+async function waitForServer() {
+    while (true) {
+        try {
+            const res = await fetch("/ping", { cache: "no-store" });
+            if (res.ok) break;
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, 1500));
+    }
+    clearInterval(bootInterval);
+    splash.classList.add("hidden");
+}
+waitForServer();
+
 const input = document.getElementById("messageInput");
 const messages = document.getElementById("messages");
 const sendBtn = document.getElementById("sendBtn");
