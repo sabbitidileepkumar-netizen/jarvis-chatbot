@@ -1,5 +1,6 @@
 import os
 import json
+import requests
 from flask import Flask, render_template, request, jsonify, session
 from dotenv import load_dotenv
 from google import genai
@@ -11,17 +12,28 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-this")
 
-MEMORY_FILE = "memory.json"
+JSONBIN_BIN_ID = "6a8bb82cf5f4af5e293a6142"
+JSONBIN_MASTER_KEY = "$2a$10$USpdPdaDuf1swL5yn4gfVuSwm3RKdGREGLxEZ6VHtmbyPnyn6VBT2"
+JSONBIN_URL = f"https://api.jsonbin.io/v3/b/{JSONBIN_BIN_ID}"
+
+HEADERS = {
+    "Content-Type": "application/json",
+    "X-Master-Key": JSONBIN_MASTER_KEY
+}
 
 def load_memory():
-    if os.path.exists(MEMORY_FILE):
-        with open(MEMORY_FILE, "r") as f:
-            return json.load(f)
-    return {}
+    try:
+        response = requests.get(f"{JSONBIN_URL}/latest", headers=HEADERS, timeout=5)
+        data = response.json()
+        return data.get("record", {})
+    except Exception:
+        return {}
 
-def save_memory(data):
-    with open(MEMORY_FILE, "w") as f:
-        json.dump(data, f)
+def save_memory(memory_data):
+    try:
+        requests.put(JSONBIN_URL, headers=HEADERS, json=memory_data, timeout=5)
+    except Exception:
+        pass
 
 @app.route("/")
 def home():
@@ -35,7 +47,7 @@ def chat():
 
     history.append({"role": "user", "content": user_message})
 
-    memory_text = "\n".join(f"{k}: {v}" for k, v in memory.items())
+    memory_text = "\n".join(f"{k}: {v}" for k, v in memory.items() if k != "status")
     context = f"Known facts about the user:\n{memory_text}\n\n"
     context += "\n".join(f"{h['role']}: {h['content']}" for h in history)
 
@@ -65,6 +77,10 @@ def add_memory():
     memory[key] = value
     save_memory(memory)
     return jsonify({"status": "saved"})
+
+@app.route("/ping", methods=["GET"])
+def ping():
+    return jsonify({"status": "awake"})
 
 if __name__ == "__main__":
     app.run(debug=True)
