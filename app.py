@@ -4,6 +4,7 @@ import requests
 from flask import Flask, render_template, request, jsonify, session
 from dotenv import load_dotenv
 from google import genai
+from authlib.integrations.flask_client import OAuth
 
 load_dotenv()
 
@@ -12,8 +13,17 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-this")
 
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
+
 JSONBIN_BIN_ID = "6a8bb82cf5f4af5e293a6142"
-JSONBIN_MASTER_KEY = "$2a$10$USpdPdaDuf1swL5yn4gfVuSwm3RKdGREGLxEZ6VHtmbyPnyn6VBT2"
+JSONBIN_MASTER_KEY = os.getenv("JSONBIN_MASTER_KEY")
 JSONBIN_URL = f"https://api.jsonbin.io/v3/b/{JSONBIN_BIN_ID}"
 
 HEADERS = {
@@ -38,6 +48,23 @@ def save_memory(memory_data):
 @app.route("/")
 def home():
     return render_template("index.html")
+
+@app.route("/login")
+def login():
+    redirect_uri = "https://jarvis-chatbot-yaoh.onrender.com/auth/callback"
+    return google.authorize_redirect(redirect_uri)
+
+@app.route("/auth/callback")
+def auth_callback():
+    token = google.authorize_access_token()
+    user_info = token.get("userinfo")
+    session["user"] = user_info
+    return f"Logged in as {user_info['email']}! <a href='/'>Go home</a>"
+
+@app.route("/logout")
+def logout():
+    session.pop("user", None)
+    return "Logged out. <a href='/'>Go home</a>"
 
 @app.route("/chat", methods=["POST"])
 def chat():
