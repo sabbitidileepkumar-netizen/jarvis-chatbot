@@ -3,3 +3,4 @@ python-dotenv
 google-genai
 gunicorn
 requests
+authlib
