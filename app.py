@@ -1,10 +1,9 @@
 import os
 import json
 import requests
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from dotenv import load_dotenv
 from google import genai
-from authlib.integrations.flask_client import OAuth
 
 load_dotenv()
 
@@ -13,17 +12,12 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-this")
 
-oauth = OAuth(app)
-google = oauth.register(
-    name='google',
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'}
-)
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+REDIRECT_URI = "https://jarvis-chatbot-yaoh.onrender.com/auth/callback"
 
 JSONBIN_BIN_ID = "6a8bb82cf5f4af5e293a6142"
-JSONBIN_MASTER_KEY = os.getenv("JSONBIN_MASTER_KEY")
+JSONBIN_MASTER_KEY = "$2a$10$USpdPdaDuf1swL5yn4gfVuSwm3RKdGREGLxEZ6VHtmbyPnyn6VBT2"
 JSONBIN_URL = f"https://api.jsonbin.io/v3/b/{JSONBIN_BIN_ID}"
 
 HEADERS = {
@@ -31,7 +25,7 @@ HEADERS = {
     "X-Master-Key": JSONBIN_MASTER_KEY
 }
 
-def load_memory():
+def load_all_data():
     try:
         response = requests.get(f"{JSONBIN_URL}/latest", headers=HEADERS, timeout=5)
         data = response.json()
@@ -39,11 +33,31 @@ def load_memory():
     except Exception:
         return {}
 
-def save_memory(memory_data):
+def save_all_data(data):
     try:
-        requests.put(JSONBIN_URL, headers=HEADERS, json=memory_data, timeout=5)
+        requests.put(JSONBIN_URL, headers=HEADERS, json=data, timeout=5)
     except Exception:
         pass
+
+def get_user_id():
+    return session.get("user", {}).get("id")
+
+def load_memory():
+    uid = get_user_id()
+    if not uid:
+        return {}
+    all_data = load_all_data()
+    return all_data.get(uid, {}).get("memory", {})
+
+def save_memory(memory_data):
+    uid = get_user_id()
+    if not uid:
+        return
+    all_data = load_all_data()
+    if uid not in all_data:
+        all_data[uid] = {}
+    all_data[uid]["memory"] = memory_data
+    save_all_data(all_data)
 
 @app.route("/")
 def home():
@@ -51,30 +65,74 @@ def home():
 
 @app.route("/login")
 def login():
-    redirect_uri = "https://jarvis-chatbot-yaoh.onrender.com/auth/callback"
-    return google.authorize_redirect(redirect_uri)
+    google_auth_url = (
+        "https://accounts.google.com/o/oauth2/v2/auth"
+        f"?client_id={GOOGLE_CLIENT_ID}"
+        f"&redirect_uri={REDIRECT_URI}"
+        "&response_type=code"
+        "&scope=openid%20email%20profile"
+        "&access_type=offline"
+    )
+    return redirect(google_auth_url)
 
 @app.route("/auth/callback")
 def auth_callback():
-    token = google.authorize_access_token()
-    user_info = token.get("userinfo")
-    session["user"] = user_info
-    return f"Logged in as {user_info['email']}! <a href='/'>Go home</a>"
+    code = request.args.get("code")
+    if not code:
+        return "Login failed: no code returned", 400
+
+    token_res = requests.post("https://oauth2.googleapis.com/token", data={
+        "code": code,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "redirect_uri": REDIRECT_URI,
+        "grant_type": "authorization_code"
+    })
+    token_data = token_res.json()
+    access_token = token_data.get("access_token")
+
+    if not access_token:
+        return "Login failed: no access token", 400
+
+    userinfo_res = requests.get(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    userinfo = userinfo_res.json()
+
+    session["user"] = {
+        "id": userinfo.get("id"),
+        "name": userinfo.get("name"),
+        "email": userinfo.get("email"),
+        "picture": userinfo.get("picture")
+    }
+
+    return redirect(url_for("home"))
 
 @app.route("/logout")
 def logout():
-    session.pop("user", None)
-    return "Logged out. <a href='/'>Go home</a>"
+    session.clear()
+    return redirect(url_for("home"))
+
+@app.route("/me")
+def me():
+    user = session.get("user")
+    if not user:
+        return jsonify({"logged_in": False})
+    return jsonify({"logged_in": True, "user": user})
 
 @app.route("/chat", methods=["POST"])
 def chat():
+    if not get_user_id():
+        return jsonify({"reply": "Please log in first."}), 401
+
     user_message = request.json.get("message", "")
     history = session.get("history", [])
     memory = load_memory()
 
     history.append({"role": "user", "content": user_message})
 
-    memory_text = "\n".join(f"{k}: {v}" for k, v in memory.items() if k != "status")
+    memory_text = "\n".join(f"{k}: {v}" for k, v in memory.items())
     context = f"Known facts about the user:\n{memory_text}\n\n"
     context += "\n".join(f"{h['role']}: {h['content']}" for h in history)
 
@@ -94,10 +152,14 @@ def chat():
 
 @app.route("/memory", methods=["GET"])
 def get_memory():
+    if not get_user_id():
+        return jsonify({})
     return jsonify(load_memory())
 
 @app.route("/memory", methods=["POST"])
 def add_memory():
+    if not get_user_id():
+        return jsonify({"status": "not logged in"}), 401
     key = request.json.get("key")
     value = request.json.get("value")
     memory = load_memory()
