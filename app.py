@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+from datetime import timedelta
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from dotenv import load_dotenv
 from google import genai
@@ -11,8 +12,8 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-this")
-from datetime import timedelta
 app.permanent_session_lifetime = timedelta(days=30)
+
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 REDIRECT_URI = "https://jarvis-chatbot-yaoh.onrender.com/auth/callback"
@@ -41,6 +42,9 @@ def save_all_data(data):
         pass
 
 def get_user_id():
+    header_id = request.headers.get("X-User-Id")
+    if header_id:
+        return header_id
     return session.get("user", {}).get("id")
 
 def load_memory():
@@ -118,6 +122,16 @@ def logout():
 
 @app.route("/me")
 def me():
+    header_id = request.headers.get("X-User-Id")
+    if header_id:
+        return jsonify({
+            "logged_in": True,
+            "user": {
+                "id": header_id,
+                "name": request.headers.get("X-User-Name", "USER"),
+                "picture": request.headers.get("X-User-Picture", "")
+            }
+        })
     user = session.get("user")
     if not user:
         return jsonify({"logged_in": False})
